@@ -5,7 +5,6 @@ from rclpy.node import Node
 
 
 class RobotAPI:
-    """Restricted robot control API exposed to generated policy code."""
 
     def __init__(self, node: Node):
         self.node = node
