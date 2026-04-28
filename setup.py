@@ -13,7 +13,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml', '.env.example']),
         (os.path.join('share', 'llm_mobile_robot', 'launch'),
-        glob('launch/*.launch.py')),
+        glob(os.path.join('launch', '*.launch.py'))),
     ],
     install_requires=['setuptools', 'python-dotenv', 'openai'],
     zip_safe=True,
