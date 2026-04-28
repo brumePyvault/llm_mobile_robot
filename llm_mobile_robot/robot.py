@@ -1,13 +1,15 @@
+import math
+import os
 import time
+
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 from elevenlabs.play import play
-import os
-import math
 
-from geometry_msgs.msg import Twist, PoseWithCovarianceStamped,Quaternion,PoseStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion, Twist
 from rclpy.node import Node
 
+from llm_mobile_robot.waypoint_store import WaypointStore
 
 
 load_dotenv()
@@ -27,6 +29,10 @@ class RobotAPI:
     def __init__(self, node: Node):
         self.node = node
         self.current_pose = None
+
+        waypoint_file = os.environ.get('WAYPOINTS_FILE', os.path.expanduser('~/.llm_mobile_robot/waypoints.json'))
+        self._waypoint_store = WaypointStore(waypoint_file)
+        self.waypoints = self._waypoint_store.load()
 
         self._cmd_pub = self.node.create_publisher(Twist, '/cmd_vel', 10)
         self.node.create_subscription(PoseWithCovarianceStamped, "/amcl_pose", self._on_pose, 10)
@@ -63,7 +69,11 @@ class RobotAPI:
         if self.current_pose is None:
             self.node.get_logger().warn(f"Cannot save waypoint '{name}': current pose unknown")
             return
-        self.waypoints[name] = self.current_pose
+
+        self._waypoint_store.set_waypoint(name, self.current_pose)
+        self._waypoint_store.save()
+        self.waypoints = self._waypoint_store.waypoints
+        self.node.get_logger().info(f"[WAYPOINT] Saved '{name}' to {self._waypoint_store.file_path}")
 
     def drive(self, linear_x: float, angular_z: float, duration_s: float) -> None:
         duration = max(0.0, min(float(duration_s), 10.0))

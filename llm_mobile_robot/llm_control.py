@@ -1,4 +1,5 @@
 import ast
+import math
 import os
 import textwrap
 from typing import Any
@@ -33,6 +34,23 @@ DEFAULT_POLICY_PROMPT = textwrap.dedent(
     """
 ).strip()
 
+FEW_SHOT_EXAMPLES = textwrap.dedent(
+    """
+    Example command: "Go to the closest location."
+    Example output:
+    def run(robot):
+        robot.say("Going to the nearest known location.")
+        robot.navigate_to("printer")
+
+    Example command: "If battery is low, go to charging station first, then office."
+    Example output:
+    def run(robot):
+        robot.say("Checking battery constraints and navigating safely.")
+        robot.navigate_to("charging_station")
+        robot.navigate_to("office")
+    """
+).strip()
+
 
 class LLMControlNode(Node):
     def __init__(self) -> None:
@@ -40,6 +58,8 @@ class LLMControlNode(Node):
 
         self.voice_topic = os.environ.get('VOICE_TOPIC', '/voice/text')
         self.model = os.environ.get('OPENAI_MODEL', 'gpt-4.1-mini')
+        self.fine_tuned_model = os.environ.get('OPENAI_FINE_TUNED_MODEL', self.model)
+        self.policy_method = os.environ.get('POLICY_METHOD', 'zero_shot').strip().lower()
         self.system_prompt = os.environ.get('POLICY_SYSTEM_PROMPT', DEFAULT_POLICY_PROMPT)
         self.robot = RobotAPI(self)
 
@@ -53,6 +73,7 @@ class LLMControlNode(Node):
 
         self.get_logger().info(f'Listening for text commands on: {self.voice_topic}')
         self.get_logger().info(f'Using OpenAI model: {self.model}')
+        self.get_logger().info(f'Policy generation method: {self.policy_method}')
 
     def _on_voice_text(self, msg: String) -> None:
         text = msg.data.strip()
@@ -70,13 +91,54 @@ class LLMControlNode(Node):
             self.robot.say('Sorry, I could not process that command safely.')
             self.robot.stop()
 
+    def _build_world_context(self) -> str:
+        pose = self.robot.current_pose
+        if pose is None:
+            return 'Current robot location: unknown\nKnown waypoints: unavailable'
+
+        lines = [
+            f"Current robot pose: x={pose['x']:.2f}, y={pose['y']:.2f}, yaw_deg={pose['yaw_deg']:.1f}",
+            'Known locations and distances from robot:',
+        ]
+
+        for name, waypoint in sorted(self.robot.waypoints.items()):
+            distance = math.dist((pose['x'], pose['y']), (waypoint['x'], waypoint['y']))
+            lines.append(f'- {name}: {distance:.2f} metres away')
+
+        if not self.robot.waypoints:
+            lines.append('- none saved yet')
+
+        return '\n'.join(lines)
+
+    def _build_prompt(self, user_text: str) -> list[dict[str, str]]:
+        world_context = self._build_world_context()
+        method = self.policy_method
+
+        if method == 'few_shot':
+            content = (
+                f'{FEW_SHOT_EXAMPLES}\n\n'
+                f'{world_context}\n\n'
+                f'Voice command: {user_text}'
+            )
+            return [
+                {'role': 'system', 'content': self.system_prompt},
+                {'role': 'user', 'content': content},
+            ]
+
+        return [
+            {'role': 'system', 'content': self.system_prompt},
+            {'role': 'user', 'content': f'{world_context}\n\nVoice command: {user_text}'},
+        ]
+
+    def _select_model(self) -> str:
+        if self.policy_method == 'fine_tuned':
+            return self.fine_tuned_model
+        return self.model
+
     def _generate_policy_code(self, user_text: str) -> str:
         response = self.client.responses.create(
-            model=self.model,
-            input=[
-                {'role': 'system', 'content': self.system_prompt},
-                {'role': 'user', 'content': f'Voice command: {user_text}'},
-            ],
+            model=self._select_model(),
+            input=self._build_prompt(user_text),
             temperature=0,
         )
 
