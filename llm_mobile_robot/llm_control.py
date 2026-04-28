@@ -89,7 +89,13 @@ class LLMControlNode(Node):
         tree = ast.parse(code, mode='exec')
         self._validate_policy_ast(tree)
 
-        safe_builtins: dict[str, Any] = {'float': float, 'int': int, 'min': min, 'max': max}
+        safe_builtins: dict[str, Any] = {
+            'float': float,
+            'int': int,
+            'min': min,
+            'max': max,
+            'range': range,
+        }
         globals_dict = {'__builtins__': safe_builtins}
         locals_dict: dict[str, Any] = {}
 
