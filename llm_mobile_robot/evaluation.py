@@ -12,6 +12,14 @@ class EvaluationRecord:
     task_success: bool
     safety_violation: bool
     latency_ms: float
+    category: str = 'uncategorized'
+
+
+@dataclass
+class CommandFixture:
+    command_id: str
+    category: str
+    text: str
 
 
 def load_records(path: str | Path) -> list[EvaluationRecord]:
@@ -28,9 +36,26 @@ def load_records(path: str | Path) -> list[EvaluationRecord]:
                 task_success=bool(row['task_success']),
                 safety_violation=bool(row['safety_violation']),
                 latency_ms=float(row['latency_ms']),
+                category=str(row.get('category', 'uncategorized')),
             )
         )
     return records
+
+
+def load_command_fixtures(path: str | Path) -> list[CommandFixture]:
+    with Path(path).open('r', encoding='utf-8') as stream:
+        payload = json.load(stream)
+
+    fixtures: list[CommandFixture] = []
+    for row in payload:
+        fixtures.append(
+            CommandFixture(
+                command_id=str(row['command_id']),
+                category=str(row['category']),
+                text=str(row['text']),
+            )
+        )
+    return fixtures
 
 
 def analyze_methods(records: list[EvaluationRecord]) -> dict[str, dict[str, float]]:
@@ -57,6 +82,26 @@ def analyze_methods(records: list[EvaluationRecord]) -> dict[str, dict[str, floa
             'avg_latency_ms': avg_latency_ms,
         }
 
+    return summary
+
+
+def analyze_methods_by_category(records: list[EvaluationRecord]) -> dict[str, dict[str, dict[str, float]]]:
+    bucket: dict[str, dict[str, list[EvaluationRecord]]] = defaultdict(lambda: defaultdict(list))
+    for record in records:
+        bucket[record.method][record.category].append(record)
+
+    summary: dict[str, dict[str, dict[str, float]]] = {}
+    for method, categories in bucket.items():
+        summary[method] = {}
+        for category, items in categories.items():
+            total = len(items)
+            summary[method][category] = {
+                'n_commands': float(total),
+                'interpretation_accuracy': sum(r.interpretation_correct for r in items) / total,
+                'task_success_rate': sum(r.task_success for r in items) / total,
+                'safety_violation_rate': sum(r.safety_violation for r in items) / total,
+                'avg_latency_ms': sum(r.latency_ms for r in items) / total,
+            }
     return summary
 
 

@@ -14,8 +14,9 @@ from llm_mobile_robot.waypoint_store import WaypointStore
 
 load_dotenv()
 elevenlabs = ElevenLabs(
-  api_key=os.getenv("ELEVENLABS_API_KEY"),
+    api_key=os.getenv('ELEVENLABS_API_KEY'),
 )
+
 
 def quat_to_yaw_deg(q: Quaternion) -> float:
     # Planar yaw only
@@ -25,40 +26,47 @@ def quat_to_yaw_deg(q: Quaternion) -> float:
 
 
 class RobotAPI:
-
     def __init__(self, node: Node):
         self.node = node
-        self.current_pose = None
+        self.current_pose: dict[str, float] | None = None
 
-        waypoint_file = os.environ.get('WAYPOINTS_FILE', os.path.expanduser('~/.llm_mobile_robot/waypoints.json'))
+        waypoint_file = os.environ.get('WAYPOINTS_FILE', '/home/brume/Documents/maps/sim_world/waypoints.json')
         self._waypoint_store = WaypointStore(waypoint_file)
         self.waypoints = self._waypoint_store.load()
 
         self._cmd_pub = self.node.create_publisher(Twist, '/cmd_vel', 10)
-        self.node.create_subscription(PoseWithCovarianceStamped, "/amcl_pose", self._on_pose, 10)
-    
+        self.node.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self._on_pose, 10)
+
     def _on_pose(self, msg: PoseWithCovarianceStamped) -> None:
         p = msg.pose.pose
         pose = {
-            "x": float(p.position.x),
-            "y": float(p.position.y),
-            "yaw_deg": float(quat_to_yaw_deg(p.orientation))
+            'x': float(p.position.x),
+            'y': float(p.position.y),
+            'yaw_deg': float(quat_to_yaw_deg(p.orientation)),
         }
         self.current_pose = pose
+
+    def status_snapshot(self) -> dict[str, float | bool | str]:
+        return {
+            'battery_percent': float(os.environ.get('SIM_BATTERY_PERCENT', '100')),
+            'busy': os.environ.get('SIM_IS_BUSY', 'false').strip().lower() == 'true',
+            'obstacle_detected': os.environ.get('SIM_OBSTACLE_DETECTED', 'false').strip().lower() == 'true',
+            'current_location_known': self.current_pose is not None,
+        }
 
     def say(self, text: str) -> None:
         audio = elevenlabs.text_to_speech.convert(
             text=text,
-            voice_id="hpp4J3VqNfWAUOO0d1Us",  # "George" - browse voices at elevenlabs.io/app/voice-library
-            model_id="eleven_v3",
-            output_format="mp3_44100_128",
-)
+            voice_id='hpp4J3VqNfWAUOO0d1Us',
+            model_id='eleven_v3',
+            output_format='mp3_44100_128',
+        )
         play(audio)
-        self.node.get_logger().info(f"[ROBOT SAY] {text}")
+        self.node.get_logger().info(f'[ROBOT SAY] {text}')
 
     def navigate_to(self, location: str) -> None:
         # TODO: replace with Nav2 action call.
-        self.node.get_logger().info(f"[NAVIGATE] Going to: {location}")
+        self.node.get_logger().info(f'[NAVIGATE] Going to: {location}')
 
     def stop(self) -> None:
         msg = Twist()
@@ -82,7 +90,7 @@ class RobotAPI:
         cmd.angular.z = float(angular_z)
 
         self.node.get_logger().info(
-            f"[DRIVE] linear_x={cmd.linear.x}, angular_z={cmd.angular.z}, duration_s={duration}"
+            f'[DRIVE] linear_x={cmd.linear.x}, angular_z={cmd.angular.z}, duration_s={duration}'
         )
 
         end_at = time.monotonic() + duration
@@ -93,5 +101,4 @@ class RobotAPI:
         self.stop()
 
     def come_back(self) -> None:
-        # TODO: replace with actual return-to-home behavior.
         self.node.get_logger().info('[RETURN] Returning to base')

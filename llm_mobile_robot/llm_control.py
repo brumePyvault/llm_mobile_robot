@@ -29,8 +29,10 @@ DEFAULT_POLICY_PROMPT = textwrap.dedent(
        - robot.save_waypoint(name: str)
        - robot.drive(linear_x: float, angular_z: float, duration_s: float)
        - robot.come_back()
-    4) Keep actions concise and safe.
-    5) If the request is ambiguous or unsafe, call robot.say(...) and robot.stop().
+       - robot.status_snapshot()
+    4) Only navigate to known waypoint names from context.
+    5) Keep actions concise and safe.
+    6) If the request is ambiguous or unsafe, call robot.say(...) and robot.stop().
     """
 ).strip()
 
@@ -93,8 +95,13 @@ class LLMControlNode(Node):
 
     def _build_world_context(self) -> str:
         pose = self.robot.current_pose
+        status = self.robot.status_snapshot()
         if pose is None:
-            return 'Current robot location: unknown\nKnown waypoints: unavailable'
+            return (
+                'Current robot location: unknown\n'
+                f"Robot status: {status}\n"
+                'Known waypoints: unavailable'
+            )
 
         lines = [
             f"Current robot pose: x={pose['x']:.2f}, y={pose['y']:.2f}, yaw_deg={pose['yaw_deg']:.1f}",
@@ -108,6 +115,7 @@ class LLMControlNode(Node):
         if not self.robot.waypoints:
             lines.append('- none saved yet')
 
+        lines.append(f'Robot status: {status}')
         return '\n'.join(lines)
 
     def _build_prompt(self, user_text: str) -> list[dict[str, str]]:
