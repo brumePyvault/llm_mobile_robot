@@ -31,7 +31,6 @@ DEFAULT_POLICY_PROMPT = textwrap.dedent(
        - robot.drive(linear_x: float, angular_z: float, duration_s: float)
        - robot.come_back()
     4) Keep actions concise and safe.
-    5) If the request is ambiguous or unsafe, call robot.say(...) and robot.stop().
     """
 ).strip()
 
