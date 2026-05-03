@@ -195,14 +195,14 @@ class RobotAPI:
         return self.current_pose
 
     def say(self, text: str) -> None:
-        audio = elevenlabs.text_to_speech.convert(
-            text=text,
-            voice_id="hpp4J3VqNfWAUOO0d1Us",
-            model_id="eleven_v3",
-            output_format="mp3_44100_128",
-        )
+        # audio = elevenlabs.text_to_speech.convert(
+        #     text=text,
+        #     voice_id="hpp4J3VqNfWAUOO0d1Us",
+        #     model_id="eleven_v3",
+        #     output_format="mp3_44100_128",
+        # )
 
-        play(audio)
+        # play(audio)
 
         self.node.get_logger().info(f"[ROBOT SAY] {text}")
 
@@ -421,7 +421,6 @@ class RobotAPI:
         """
         if self.prev_pose is None:
             self.node.get_logger().warn("[COME BACK] Previous pose is unknown")
-            self.say("I do not know my previous location yet.")
             self.stop()
             return
 
@@ -429,7 +428,6 @@ class RobotAPI:
             self.node.get_logger().error(
                 "[COME BACK] /navigate_to_pose action server not available"
             )
-            self.say("Navigation server is not available right now.")
             self.stop()
             return
 
@@ -458,62 +456,9 @@ class RobotAPI:
             f"y={goal.pose.pose.position.y:.2f}"
         )
 
-        send_goal_future = self._nav_action.send_goal_async(goal)
+        send_goal_future = self._nav_action.send_goal_async(goal,feedback_callback=self._on_nav_feedback)
+        send_goal_future.add_done_callback(self._on_goal_response)
 
-        rclpy.spin_until_future_complete(
-            self.node,
-            send_goal_future,
-            timeout_sec=5.0
-        )
+        
 
-        if not send_goal_future.done():
-            self.node.get_logger().error(
-                "[COME BACK] Timeout while sending return goal"
-            )
-            self.say("I could not return to the previous location.")
-            self.stop()
-            return
-
-        goal_handle = send_goal_future.result()
-
-        if goal_handle is None or not goal_handle.accepted:
-            self.node.get_logger().error(
-                "[COME BACK] Goal rejected for previous location"
-            )
-            self.say("I could not return to the previous location.")
-            self.stop()
-            return
-
-        self.node.get_logger().info("[COME BACK] Return goal accepted")
-
-        result_future = goal_handle.get_result_async()
-
-        rclpy.spin_until_future_complete(
-            self.node,
-            result_future,
-            timeout_sec=60.0
-        )
-
-        if not result_future.done():
-            self.node.get_logger().warn(
-                "[COME BACK] Timeout while returning to previous location"
-            )
-            self.say("I could not return in time.")
-            self.stop()
-            return
-
-        result = result_future.result()
-
-        if result is None:
-            self.node.get_logger().error(
-                "[COME BACK] No result for previous location"
-            )
-            self.say("Failed to return to the previous location.")
-            self.stop()
-            return
-
-        self.node.get_logger().info(
-            "[COME BACK] Returned to previous location"
-        )
-
-        self.current_goal = None
+        
