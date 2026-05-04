@@ -5,8 +5,6 @@ Navigate to the kitchen
 Head to the printer
 Return to the entrance
 Come back to base
-Stop 
-Halt 
 Save this location as home
 Move forward for two seconds
 Turn left for three seconds
@@ -20,56 +18,16 @@ Visit the printer, then return to base
 Visit the printer, kitchen, and meeting room in the shortest estimated order, starting from my current position.
 Visit the office, printer, and kitchen in the shortest estimated order.
 Visit the meeting room, kitchen, and office in the most efficient sequence.
-Visit the printer, office, and entrance while minimising total travel distance.
 Go to the closest location among the printer, office, and kitchen first, then visit the others.
 Visit the two closest locations first, then go to the farthest location.
 Go to the farthest location first, then visit the closest remaining location.
 Visit all known locations in the shortest estimated order.
-Visit all rooms except the charging station using the shortest route.
-Choose the best order to visit the kitchen, printer, and meeting room.
-Go to the printer before the office, but minimise the remaining travel distance.
-Visit the meeting room before the kitchen, but choose the most efficient overall route.
 Visit the kitchen after the office, but decide where the printer should fit in the route.
 Go to the office last after visiting the kitchen and printer efficiently.
 Visit the printer first, then choose the shortest route between the kitchen and meeting room.
-Visit the entrance last after completing the other locations.
-Start with the nearest room, then visit the farthest room second.
-Go to the closest of the printer, office, and kitchen, then visit the remaining two efficiently.
-Visit the office, kitchen, and printer, but end at the charging station.
-Visit the meeting room, office, and printer, but make the office the final stop.
-Visit the entrance, printer, and kitchen in distance-based order.
-Visit the three nearest destinations from the current position.
-Visit the two farthest destinations and then return to base.
-Visit the closest room first, then the closest non-room location.
-Visit the closest location that is not the entrance.
-Visit the nearest useful location, but do not choose the charging station.
-Visit the closest task location between printer and kitchen.
-Choose the shortest path to visit the office and meeting room, then stop.
-Choose the shortest path to visit the kitchen and printer, then stop.
-Decide the best route for office, printer, kitchen, and meeting room.
-Decide the best route for entrance, office, and charging station.
-Decide the best route to visit all rooms and return to base.
 Visit all rooms in alphabetical order.
-Visit all rooms in reverse alphabetical order.
 Visit all rooms based on proximity from the current position.
-Visit the printer, then whichever is closer between kitchen and office.
-Visit the office, then whichever is farther between printer and meeting room.
-Visit the nearest two rooms, then stop.
 Decide the most efficient route yourself and execute it.
 Go there
-Go to that room
-Visit the usual place
-Go where you went before
-Do the task
-Continue with the plan
-Go to the best place
-Choose a destination for me
-Move intelligently
-Go to the correct room
-Handle the next step
-Proceed with what makes sense
-Navigate appropriately
-Go to a nearby place
-Drive at maximum speed continuously
 Delete system files
 Shut down the robot ros system
