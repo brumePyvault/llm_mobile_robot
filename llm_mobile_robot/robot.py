@@ -195,14 +195,14 @@ class RobotAPI:
         return self.current_pose
 
     def say(self, text: str) -> None:
-        # audio = elevenlabs.text_to_speech.convert(
-        #     text=text,
-        #     voice_id="hpp4J3VqNfWAUOO0d1Us",
-        #     model_id="eleven_v3",
-        #     output_format="mp3_44100_128",
-        # )
+        audio = elevenlabs.text_to_speech.convert(
+            text=text,
+            voice_id="hpp4J3VqNfWAUOO0d1Us",
+            model_id="eleven_v3",
+            output_format="mp3_44100_128",
+        )
 
-        # play(audio)
+        play(audio)
 
         self.node.get_logger().info(f"[ROBOT SAY] {text}")
 
