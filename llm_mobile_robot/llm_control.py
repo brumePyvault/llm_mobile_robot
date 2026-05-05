@@ -355,13 +355,15 @@ class LLMControlNode(Node):
 
         if llm_strategy == 'few_shot':
             content = (
+                f'{self.system_prompt}\n\n'
                 f'{FEW_SHOT_EXAMPLES}\n\n'
-                f'{world_context}\n\n'
-                f'Voice command: {user_text}'
+                'Example ends here.\n\n'
+                '......now generate a policy for the new command below using the same style and reasoning approach as the examples.\n\n'
+                
             )
             return [
-                {'role': 'system', 'content': self.system_prompt},
-                {'role': 'user', 'content': content},
+                {'role': 'system', 'content': content},
+            {'role': 'user', 'content': f'{world_context}\n\nVoice command: {user_text}'},
             ]
 
         return [
