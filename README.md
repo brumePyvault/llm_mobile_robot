@@ -20,6 +20,7 @@ pip install -e .
 pip install requests SpeechRecognition elevenlabs pyyaml
 python3 -m pip install openai
 sudo apt install portaudio19-dev python3-pyaudio -y
+sudo apt install ffmpeg -y
 cd ~/turtlebot3_ws/src/
 git clone -b humble https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git
 git clone https://github.com/brumePyvault/llm_mobile_robot.git

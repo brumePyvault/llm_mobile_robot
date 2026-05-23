@@ -389,7 +389,7 @@ class LLMControlNode(Node):
             lines.append(f'- {name}: {distance:.2f} metres away, at (x={waypoint["x"]:.2f}, y={waypoint["y"]:.2f})')
 
         if not self.robot.waypoints:
-            lines.append('- none saved yet')
+            lines.append('- none saved yet, so do not navigate anywhere')
 
         return '\n'.join(lines)
 
