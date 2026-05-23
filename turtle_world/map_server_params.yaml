@@ -1,0 +1,5 @@
+map_server:
+  ros__parameters:
+    yaml_filename: "./turtle_world.yaml"
+    frame_id: "map"
+    topic_name: "map"
