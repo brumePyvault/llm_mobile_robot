@@ -60,7 +60,7 @@ class RobotAPI:
 
         waypoint_file = os.environ.get(
             "WAYPOINTS_FILE",
-            "/home/brume/Documents/maps/sim_world/waypoints.json"
+            "/home/turtlebot3_ws/src/llm_mobile_robot/turtle_world/waypoints.json"
         )
 
         self._waypoint_store = WaypointStore(waypoint_file)

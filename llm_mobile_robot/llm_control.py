@@ -375,7 +375,7 @@ class LLMControlNode(Node):
         pose = self.robot.current_pose
         if pose is None:
             return (
-                'Current robot location: unknown\n'
+                'Current robot location: unknown do not navigate/save anywhere\n'
                 'Known waypoints: unavailable'
             )
 
