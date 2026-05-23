@@ -24,7 +24,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-        'llm_control = llm_mobile_robot.llm_control:main'
+        'llm_control = llm_mobile_robot.llm_control:main',
         'stt = llm_mobile_robot.stt:main'
         ],
     },
