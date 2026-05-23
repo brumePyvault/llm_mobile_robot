@@ -1,10 +1,8 @@
-
-# LLM Mobile Robot 
+# LLM Mobile Robot
 
 This repository implements an LLM-based command-processing system for controlling a mobile robot using natural language commands in a ROS 2 simulation environment. The system translates typed user commands into executable Python robot policies, validates the generated code for safety, and executes approved actions through a controlled RobotAPI.
 The project forms part of the thesis:
 Evaluation of LLM-Based Command Processing Strategies for Natural Language Control of Mobile Robots
-
 
 ## Setup
 
@@ -21,6 +19,7 @@ pip install -U pip
 pip install -e .
 pip install requests SpeechRecognition elevenlabs pyyaml
 python3 -m pip install openai
+sudo apt install portaudio19-dev python3-pyaudio -y
 cd ~/turtlebot3_ws/src/
 git clone -b humble https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git
 git clone https://github.com/brumePyvault/llm_mobile_robot.git
@@ -52,18 +51,25 @@ For the sake of this project, I have already done the mapping and put the virtua
 ```bash
 ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=$HOME/turtlebot3_ws/src/llm_mobile_robot/turtle_world/turtle_world.yaml
 ```
+
 #### Open terminal 3
+
 ```bash
 ros2 launch llm_mobile_robot start_llm_control.launch.py
 ```
+
 #### Open terminal 4
+
 **this is a push to talk STT(Speech to Text)**
+
 ```bash
 ros2 run llm_mobile_robot stt
 ```
+
 ### Step three
+
 Enjoy talking to terminal 3 and watch the movement on gazebo
+
 ## Authors
 
 - [@brumePyvault](https://www.github.com/brumepyvault)
-
