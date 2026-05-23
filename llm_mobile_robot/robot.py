@@ -85,6 +85,20 @@ class RobotAPI:
             "navigate_to_pose"
         )
 
+        # On startup, block briefly for an initial AMCL pose so the robot has
+        # a known map-frame pose before first command execution.
+        initial_pose = self.get_amcl_pose_from_terminal(timeout_s=60.0)
+        if initial_pose is not None:
+            self.current_pose = initial_pose
+            self.current_pose_time = time.monotonic()
+            self.node.get_logger().info(
+                "[STARTUP] Initial AMCL pose acquired from terminal."
+            )
+        else:
+            self.node.get_logger().warn(
+                "[STARTUP] Initial AMCL pose not available yet; continuing without it."
+            )
+
     def _on_pose(self, msg: PoseWithCovarianceStamped) -> None:
         """
         Subscriber callback for /amcl_pose.
