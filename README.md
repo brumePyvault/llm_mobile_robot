@@ -68,7 +68,7 @@ ros2 run llm_mobile_robot stt
 
 ### Step three
 
-Enjoy talking to terminal 3 and watch the movement on gazebo
+Enjoy talking to terminal 4 and watch the movement on gazebo
 
 ## Authors
 
