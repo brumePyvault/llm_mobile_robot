@@ -40,18 +40,16 @@ ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
 
 ##### Initial pose of the robot
 
-![Initial pose of the robot](https://res.cloudinary.com/deuhrgf1w/image/upload/v1779566849/ca67bd04-65e5-4068-8b43-44bd4eaf5b42.png)
-
-After the virtual enviroment has launched, we have to [localize](https://emanual.robotis.com/docs/en/platform/turtlebot3/navigation/#estimate-initial-pose) the robot on the virtual map.
-only do the estimate initial pose instruction
-
-##### After localization
-
 For the sake of this project, I have already done the mapping and put the virtual map in the turtle_world folder.
 
 ```bash
 ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=$HOME/turtlebot3_ws/src/llm_mobile_robot/turtle_world/turtle_world.yaml
 ```
+
+![Initial pose of the robot](https://res.cloudinary.com/deuhrgf1w/image/upload/v1779566849/ca67bd04-65e5-4068-8b43-44bd4eaf5b42.png)
+
+After the virtual enviroment has launched, we have to [localize](https://emanual.robotis.com/docs/en/platform/turtlebot3/navigation/#estimate-initial-pose) the robot on the virtual map.
+only do the estimate initial pose instruction
 
 #### Open terminal 3
 
