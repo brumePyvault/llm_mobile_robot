@@ -26,11 +26,12 @@ sudo apt install portaudio19-dev python3-pyaudio -y
 sudo apt install ffmpeg -y
 echo 'export OPENAI_API_KEY=your_openai_api_key_here' >> ~/.bashrc
 echo 'export ELEVENLABS_API_KEY=your_api_key_not_required_but_fun' >> ~/.bashrc
+source ~/.bashrc
 cd ~/turtlebot3_ws/src/
 git clone -b humble https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git
 git clone https://github.com/brumePyvault/llm_mobile_robot.git
 cd ~/turtlebot3_ws
-colcon build --symlink-install
+colcon build
 ```
 
 ### Step Two
