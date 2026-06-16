@@ -5,7 +5,9 @@ from elevenlabs.play import play
 import os
 import math
 import subprocess
+import shutil
 import yaml
+from pathlib import Path
 
 import rclpy
 from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, Quaternion, PoseStamped
@@ -14,6 +16,56 @@ from rclpy.action import ActionClient
 from rclpy.node import Node
 
 from llm_mobile_robot.waypoint_store import WaypointStore
+
+
+def _default_waypoint_file() -> Path:
+    """Return a ROS-user-writable waypoint file path.
+
+    The package ships read-only default waypoints, but a deployed ROS user may
+    not have sudo rights to read or update files in the workspace/install tree.
+    Keep the runtime copy under ROS_HOME (or ~/.ros) so loading and saving
+    waypoints does not depend on privileged source-directory access.
+    """
+    ros_home = Path(os.environ.get("ROS_HOME", Path.home() / ".ros"))
+    return ros_home / "llm_mobile_robot" / "waypoints.json"
+
+
+def _seed_waypoint_file(target: Path) -> None:
+    """Create the runtime waypoint file from bundled defaults when possible."""
+    if target.exists():
+        return
+
+    candidates = [
+        (
+            Path(__file__).resolve().parent.parent
+            / "turtle_world"
+            / "waypoints.json"
+        ),
+        (
+            Path("/home/turtlebot3_ws/src/llm_mobile_robot")
+            / "turtle_world"
+            / "waypoints.json"
+        ),
+    ]
+    for prefix in os.environ.get("AMENT_PREFIX_PATH", "").split(os.pathsep):
+        if prefix:
+            candidates.append(
+                Path(prefix)
+                / "share"
+                / "llm_mobile_robot"
+                / "turtle_world"
+                / "waypoints.json"
+            )
+
+    for source in candidates:
+        try:
+            if source.is_file():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+                target.chmod(0o644)
+                return
+        except OSError:
+            continue
 
 
 load_dotenv()
@@ -58,10 +110,12 @@ class RobotAPI:
         self.prev_pose = None
         self.current_goal = None
 
-        waypoint_file = os.environ.get(
-            "WAYPOINTS_FILE",
-            "/home/turtlebot3_ws/src/llm_mobile_robot/turtle_world/waypoints.json"
+        waypoint_file = (
+            Path(os.environ["WAYPOINTS_FILE"])
+            if "WAYPOINTS_FILE" in os.environ
+            else _default_waypoint_file()
         )
+        _seed_waypoint_file(waypoint_file)
 
         self._waypoint_store = WaypointStore(waypoint_file)
         self.waypoints = self._waypoint_store.load()
