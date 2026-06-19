@@ -71,9 +71,19 @@ ros2 launch llm_mobile_robot start_llm_control.launch.py
 ros2 run llm_mobile_robot stt
 ```
 
+**or to avoid talking you can use ros2 publisher**
+
+```bash
+ros2 topic pub --once /voice/text std_msgs/msg/String "{data: 'Go to the office.'}"
+```
+
 ### Step three
 
 Enjoy talking to terminal 4 and watch the movement on gazebo
+
+#### Location Map
+
+![location map](https://res.cloudinary.com/deuhrgf1w/image/upload/v1779582029/Screenshot_2026-05-24_010858_jgym13.png)
 
 ## Authors
 
