@@ -3,10 +3,6 @@ import os
 from glob import glob
 
 package_name = 'llm_mobile_robot'
-turtle_world_files = [
-    path for path in glob(os.path.join('turtle_world', '*'))
-    if os.path.isfile(path)
-]
 
 setup(
     name=package_name,
@@ -18,8 +14,6 @@ setup(
         ('share/' + package_name, ['package.xml', '.env.example']),
         (os.path.join('share', 'llm_mobile_robot', 'launch'),
         glob(os.path.join('launch', '*.launch.py'))),
-        (os.path.join('share', 'llm_mobile_robot', 'turtle_world'),
-        turtle_world_files),
     ],
     install_requires=['setuptools', 'python-dotenv', 'openai'],
     zip_safe=True,
