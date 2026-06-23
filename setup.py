@@ -14,6 +14,8 @@ setup(
         ('share/' + package_name, ['package.xml', '.env.example']),
         (os.path.join('share', 'llm_mobile_robot', 'launch'),
         glob(os.path.join('launch', '*.launch.py'))),
+        (os.path.join('share', 'llm_mobile_robot', 'turtle_world'),
+        glob(os.path.join('turtle_world', 'turtle_world.*'))),
     ],
     install_requires=['setuptools', 'python-dotenv', 'openai'],
     zip_safe=True,

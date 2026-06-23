@@ -47,6 +47,98 @@ def yaw_deg_to_quat(yaw_deg: float) -> Quaternion:
     return quat
 
 
+class OccupancyGridMap:
+    """Load a ROS map-server occupancy grid and answer simple clearance queries."""
+
+    def __init__(self, yaml_file: str):
+        self.yaml_file = os.path.expanduser(yaml_file)
+        with open(self.yaml_file, "r", encoding="utf-8") as stream:
+            metadata = yaml.safe_load(stream)
+
+        self.resolution = float(metadata["resolution"])
+        self.origin_x = float(metadata["origin"][0])
+        self.origin_y = float(metadata["origin"][1])
+        self.negate = int(metadata.get("negate", 0))
+        self.occupied_thresh = float(metadata.get("occupied_thresh", 0.65))
+        self.free_thresh = float(metadata.get("free_thresh", 0.25))
+
+        image_path = metadata["image"]
+        if not os.path.isabs(image_path):
+            image_path = os.path.join(os.path.dirname(self.yaml_file), image_path)
+
+        self.width, self.height, self.pixels = self._read_pgm(image_path)
+
+    @staticmethod
+    def _read_pgm(image_path: str) -> tuple[int, int, bytes]:
+        with open(image_path, "rb") as stream:
+            magic = stream.readline().strip()
+            if magic != b"P5":
+                raise ValueError(
+                    f"Unsupported map image format {magic!r}; expected P5 PGM"
+                )
+
+            line = stream.readline().strip()
+            while line.startswith(b"#"):
+                line = stream.readline().strip()
+            width, height = [int(value) for value in line.split()]
+
+            max_value = int(stream.readline().strip())
+            if max_value != 255:
+                raise ValueError("Only 8-bit PGM occupancy maps are supported")
+
+            pixels = stream.read(width * height)
+            if len(pixels) != width * height:
+                raise ValueError("PGM file ended before all map pixels were read")
+
+        return width, height, pixels
+
+    def _world_to_pixel(self, x: float, y: float) -> tuple[int, int] | None:
+        map_x = int(math.floor((x - self.origin_x) / self.resolution))
+        map_y = int(math.floor((y - self.origin_y) / self.resolution))
+
+        if map_x < 0 or map_x >= self.width or map_y < 0 or map_y >= self.height:
+            return None
+
+        row = self.height - 1 - map_y
+        return map_x, row
+
+    def _occupancy_probability(self, value: int) -> float:
+        if self.negate:
+            return value / 255.0
+        return (255 - value) / 255.0
+
+    def is_occupied(self, x: float, y: float) -> bool:
+        pixel = self._world_to_pixel(x, y)
+        if pixel is None:
+            return True
+
+        col, row = pixel
+        value = self.pixels[row * self.width + col]
+        return self._occupancy_probability(value) >= self.occupied_thresh
+
+    def forward_clearance(
+        self,
+        x: float,
+        y: float,
+        yaw_deg: float,
+        max_distance_m: float,
+        step_m: float | None = None,
+    ) -> float:
+        """Return metres from pose to the first occupied/out-of-map cell ahead."""
+        step = step_m or max(self.resolution / 2.0, 0.02)
+        yaw_rad = math.radians(yaw_deg)
+        distance = 0.0
+
+        while distance <= max_distance_m:
+            check_x = x + math.cos(yaw_rad) * distance
+            check_y = y + math.sin(yaw_rad) * distance
+            if self.is_occupied(check_x, check_y):
+                return distance
+            distance += step
+
+        return max_distance_m
+
+
 class RobotAPI:
 
     def __init__(self, node: Node):
@@ -65,6 +157,23 @@ class RobotAPI:
 
         self._waypoint_store = WaypointStore(waypoint_file)
         self.waypoints = self._waypoint_store.load()
+
+        default_map_file = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "turtle_world",
+            "turtle_world.yaml",
+        )
+        map_file = os.environ.get("MAP_YAML_FILE", default_map_file)
+        self.occupancy_map = None
+        try:
+            self.occupancy_map = OccupancyGridMap(map_file)
+            self.node.get_logger().info(
+                f"[MAP] Loaded occupancy grid from {self.occupancy_map.yaml_file}"
+            )
+        except Exception as exc:
+            self.node.get_logger().warn(
+                f"[MAP] Occupancy grid unavailable: {exc}"
+            )
 
         self._cmd_pub = self.node.create_publisher(
             Twist,
@@ -396,6 +505,45 @@ class RobotAPI:
             f"[WAYPOINT] Saved '{name}' to {self._waypoint_store.file_path}"
         )
 
+    def forward_clearance(
+        self,
+        speed_mps: float,
+        duration_s: float,
+    ) -> float | None:
+        """Estimate straight-line clearance for a drive command."""
+        pose = self.get_current_pose()
+        if pose is None or self.occupancy_map is None or speed_mps <= 0.0:
+            return None
+
+        requested_distance = abs(float(speed_mps)) * max(0.0, float(duration_s))
+        return self.occupancy_map.forward_clearance(
+            pose["x"],
+            pose["y"],
+            pose["yaw_deg"],
+            requested_distance,
+        )
+
+    def safe_drive_duration(
+        self,
+        linear_x: float,
+        angular_z: float,
+        duration_s: float,
+        safety_margin_m: float = 0.25,
+    ) -> float:
+        """Cap forward drive time so a straight command stops before a mapped obstacle."""
+        requested = max(0.0, min(float(duration_s), 10.0))
+        speed = float(linear_x)
+
+        if speed <= 0.0 or abs(float(angular_z)) > 1e-6:
+            return requested
+
+        clearance = self.forward_clearance(speed, requested)
+        if clearance is None:
+            return requested
+
+        safe_distance = max(0.0, clearance - safety_margin_m)
+        return min(requested, safe_distance / speed)
+
     def drive(
         self,
         linear_x: float,
@@ -407,7 +555,18 @@ class RobotAPI:
         """
         self.prev_pose = self.get_current_pose()
 
-        duration = max(0.0, min(float(duration_s), 10.0))
+        requested_duration = max(0.0, min(float(duration_s), 10.0))
+        duration = self.safe_drive_duration(
+            linear_x,
+            angular_z,
+            requested_duration,
+        )
+
+        if duration < requested_duration:
+            self.node.get_logger().warn(
+                f"[DRIVE] Shortened command from {requested_duration:.2f}s "
+                f"to {duration:.2f}s because the occupancy map shows an obstacle ahead"
+            )
 
         cmd = Twist()
         cmd.linear.x = float(linear_x)

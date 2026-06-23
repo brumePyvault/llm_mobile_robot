@@ -32,6 +32,8 @@ DEFAULT_POLICY_PROMPT = textwrap.dedent(
        - robot.drive(linear_x: float, angular_z: float, duration_s: float)
        - robot.come_back()
     4) Keep actions concise and safe.
+    5) If the world context reports a mapped obstacle ahead, shorten or refuse
+       manual drive commands instead of blindly using the full requested time.
     """
 ).strip()
 
@@ -391,7 +393,47 @@ class LLMControlNode(Node):
         if not self.robot.waypoints:
             lines.append('- none saved yet, so do not navigate anywhere')
 
+        lines.extend(self._build_occupancy_context(pose))
+
         return '\n'.join(lines)
+
+    def _build_occupancy_context(self, pose: dict[str, float]) -> list[str]:
+        lines = ['Occupancy grid map:']
+
+        if self.robot.occupancy_map is None:
+            lines.append(
+                '- unavailable; rely on navigation stack safety and keep manual '
+                'drive commands conservative'
+            )
+            return lines
+
+        nominal_speed = 0.23
+        nominal_duration = 10.0
+        requested_distance = nominal_speed * nominal_duration
+        clearance = self.robot.occupancy_map.forward_clearance(
+            pose['x'],
+            pose['y'],
+            pose['yaw_deg'],
+            requested_distance,
+        )
+        safe_distance = max(0.0, clearance - 0.25)
+        safe_duration = (
+            safe_distance / nominal_speed if nominal_speed > 0 else 0.0
+        )
+
+        lines.append(
+            f'- map resolution: {self.robot.occupancy_map.resolution:.2f} metres/cell'
+        )
+        lines.append(
+            f'- straight-ahead occupied-cell clearance from current pose: {clearance:.2f} metres'
+        )
+        lines.append(
+            '- for robot.drive(0.23, 0.0, 10.0), requested distance is '
+            f'{requested_distance:.2f} metres; with a 0.25 metre safety margin, '
+            f'use at most {safe_duration:.1f} seconds if driving straight forward'
+        )
+
+        return lines
 
     def _generate_policy_code(self, user_text: str) -> tuple[str, float]:
         start_time = time.perf_counter()
