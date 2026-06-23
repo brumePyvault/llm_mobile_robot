@@ -158,10 +158,9 @@ class RobotAPI:
         self._waypoint_store = WaypointStore(waypoint_file)
         self.waypoints = self._waypoint_store.load()
 
-        default_map_file = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            "turtle_world",
-            "turtle_world.yaml",
+        default_map_file = os.environ.get(
+            "MAP_YAML_FILE",
+            "~/turtlebot3_ws/src/llm_mobile_robot/turtle_world/map.yaml"
         )
         map_file = os.environ.get("MAP_YAML_FILE", default_map_file)
         self.occupancy_map = None
